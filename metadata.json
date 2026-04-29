@@ -1,0 +1,7 @@
+{
+  "name": "Packing Pal",
+  "description": "Smart packing list generator that creates tailored checklists based on trip type, duration, and weather forecasts using AI.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
