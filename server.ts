@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import axios from "axios";
 import dotenv from "dotenv";
+import weatherRouter from "./src/routes/weatherRoutes";
 
 dotenv.config();
 
@@ -101,23 +102,8 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Get Weather
-app.get("/api/weather", async (req, res) => {
-  const { q } = req.query;
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey || apiKey === "YOUR_OPENWEATHER_API_KEY") {
-    return res.status(500).json({ error: "OpenWeather API key is missing. Please add OPENWEATHER_API_KEY to the Secrets panel." });
-  }
-
-  try {
-    const response = await axios.get(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(q as string)}&appid=${apiKey}&units=metric`);
-    res.json(response.data);
-  } catch (error: any) {
-    const status = error.response?.status || 500;
-    const message = error.response?.data?.message || error.message || "Weather service error";
-    res.status(status).json({ error: `Weather API Error (${status}): ${message}` });
-  }
-});
+// Weather Route Module
+app.use("/api/weather", weatherRouter);
 
 // Geocoding for suggestions
 app.get("/api/geocode", async (req, res) => {
