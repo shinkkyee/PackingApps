@@ -1,0 +1,36 @@
+# Packing Pal Mobile - Developer Guide
+
+This guide explains how to run the Expo mobile application on your physical device or emulator.
+
+## Prerequisites
+1. Install the **Expo Go** app on your phone (iOS App Store or Android Play Store).
+2. Ensure your phone and laptop are connected to the **SAME Wi-Fi network**.
+3. (Optional) Install Android Studio (for Android Emulator) or Xcode (for iOS Simulator).
+
+## 1. Setup Backend
+Before starting the mobile app, the backend must be running:
+1. Open a terminal in the root directory.
+2. Run `npm run dev`
+3. Ensure your `.env` file has the `OPENWEATHER_API_KEY`.
+
+## 2. Configure Mobile Environment
+1. Go to the `mobile/` directory.
+2. Open the `.env` file.
+3. Update `EXPO_PUBLIC_API_URL` to match your computer's Local IP address.
+   * On Windows: Run `ipconfig` to find your IPv4 Address (e.g., 192.168.1.5).
+   * Set it like this: `EXPO_PUBLIC_API_URL=http://192.168.1.5:3000/api`
+
+## 3. Start Expo Server
+1. Open a new terminal in the `mobile/` directory.
+2. Run: `npx expo start -c`
+3. A QR code will appear in the terminal.
+
+## 4. Launch on Phone
+1. **Android**: Open the **Expo Go** app and tap "Scan QR Code".
+2. **iOS**: Open the **Camera app** and scan the QR code, then tap the "Open in Expo Go" notification.
+3. The app will bundle and load.
+
+## Troubleshooting
+- **Connection Timeout**: This is usually a Firewall issue. Ensure your computer's firewall allows incoming connections on port 8081 and 3000.
+- **API URL Error**: If the app says it can't connect, double-check that your Local IP in `mobile/.env` is correct and that the backend is actually running.
+- **Cache Issues**: If you change environment variables, restart Expo with the `-c` flag: `npx expo start -c`.

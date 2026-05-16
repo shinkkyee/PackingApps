@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import api from './services/api';
 import { generatePackingList } from './services/gemini';
+import { WeatherPreview } from './components/WeatherPreview';
+import { fetchWeather } from './services/weatherApi';
+
 
 // --- Constants ---
 
@@ -400,9 +403,16 @@ const NewTrip = ({ onTripCreated }: { onTripCreated: (trip?: any) => void }) => 
         
         // Fetch weather preview for the first suggestion or the destination itself
         try {
-          const { data: weatherData } = await api.get(`/weather?q=${destination}`);
-          const forecast = weatherData.list[0];
-          setWeatherPreview(`${forecast.weather[0].description}, ${Math.round(forecast.main.temp)}°C`);
+          const response = await fetchWeather(destination);
+          if (response.success && response.data && response.data.days && response.data.days.length > 0) {
+            const day = response.data.days[0];
+            const forecast = day.noon || day.morning || day.night;
+            if (forecast) {
+              setWeatherPreview(`${forecast.condition}, ${Math.round(forecast.temp)}°C`);
+            }
+          } else {
+            setWeatherPreview(null);
+          }
         } catch (err) {
           setWeatherPreview(null);
         }
@@ -429,26 +439,48 @@ const NewTrip = ({ onTripCreated }: { onTripCreated: (trip?: any) => void }) => 
       // 1. Weather Summary (Graceful degradation for unrecognized cities)
       let weatherSummary = weatherPreview || "Weather data unavailable for this location";
       
+      let hasRain = false;
+      
       if (!weatherPreview) {
         try {
-          const { data: weatherData } = await api.get(`/weather?q=${destination}`);
-          if (weatherData && weatherData.list && weatherData.list[0]) {
-            const forecast = weatherData.list[0];
-            weatherSummary = `${forecast.weather[0].description}, ${Math.round(forecast.main.temp)}°C`;
+          const response = await fetchWeather(destination);
+          if (response.success && response.data && response.data.days && response.data.days.length > 0) {
+            const day = response.data.days[0];
+            const forecast = day.noon || day.morning || day.night;
+            if (forecast) {
+              weatherSummary = `${forecast.condition}, ${Math.round(forecast.temp)}°C`;
+            }
+            hasRain = response.data.days.some(d => d.morning?.hasRain || d.noon?.hasRain || d.night?.hasRain);
           }
         } catch (err) {
           console.warn("Could not fetch weather for this destination", err);
           // We continue anyway per user requirement to accept any place
         }
+      } else {
+        // If we already had weather preview, we should quickly check rain status
+        try {
+          const response = await fetchWeather(destination);
+          if (response.success && response.data && response.data.days) {
+             hasRain = response.data.days.some(d => d.morning?.hasRain || d.noon?.hasRain || d.night?.hasRain);
+          }
+        } catch (e) {}
+      }
+      
+      if (hasRain) {
+        weatherSummary += " (Rain is expected! Ensure raincoat and umbrella are packed.)";
       }
 
       // 2. Generate Smart Packing List
       let items = [
         { name: 'Passport', category: 'Documents' },
         { name: 'Phone Charger', category: 'Electronics' },
-        { name: 'Walking Shoes', category: 'Clothing' },
-        { name: 'Umbrella', category: 'Essentials' }
+        { name: 'Walking Shoes', category: 'Clothing' }
       ];
+      
+      if (hasRain) {
+        items.push({ name: 'Umbrella', category: 'Essentials' });
+        items.push({ name: 'Raincoat', category: 'Clothing' });
+      }
 
       try {
         const duration = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
@@ -779,26 +811,7 @@ const TripDetail = ({ trips, setTrips }: { trips: any[], setTrips: (t: any[]) =>
           </div>
         </Card>
 
-        <Card className="bg-blue-50 border-blue-100">
-          <h3 className="font-bold mb-4 flex items-center gap-2 text-blue-900">
-            <Cloud size={20} />
-            Weather Forecast
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
-                <Thermometer size={20} />
-              </div>
-              <div>
-                <p className="text-xs text-blue-600 font-medium uppercase tracking-wider">Summary</p>
-                <p className="font-bold text-blue-900">{trip.weather_summary}</p>
-              </div>
-            </div>
-            <p className="text-sm text-blue-700/70 italic">
-              AI suggested items based on this forecast.
-            </p>
-          </div>
-        </Card>
+        <WeatherPreview city={trip.destination} />
       </div>
 
       <div className="space-y-8">
