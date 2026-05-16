@@ -25,9 +25,14 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-export async function fetchWeather(city: string): Promise<{ success: boolean; data?: WeatherForecast; error?: string }> {
+export async function fetchWeather(city: string, lat?: number, lon?: number): Promise<{ success: boolean; data?: WeatherForecast; error?: string }> {
   try {
-    const response = await api.get(`/weather/${encodeURIComponent(city)}`);
+    const params: any = {};
+    if (lat !== undefined && lon !== undefined) {
+      params.lat = lat;
+      params.lon = lon;
+    }
+    const response = await api.get(`/weather/${encodeURIComponent(city)}`, { params });
     return response.data;
   } catch (error: any) {
     if (axios.isAxiosError(error) && error.response) {

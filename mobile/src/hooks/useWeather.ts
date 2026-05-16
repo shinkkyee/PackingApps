@@ -2,17 +2,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchWeather } from '../services/api';
 import { WeatherForecast } from '../types/weather';
 
-export function useWeather(city: string | null) {
+export function useWeather(city: string | null, lat?: number, lon?: number) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<WeatherForecast | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const performFetch = async (targetCity: string) => {
+  const performFetch = async (targetCity: string, targetLat?: number, targetLon?: number) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetchWeather(targetCity);
+      const response = await fetchWeather(targetCity, targetLat, targetLon);
       if (response.success && response.data) {
         setData(response.data);
       } else {
@@ -29,9 +29,9 @@ export function useWeather(city: string | null) {
 
   const refetch = useCallback(() => {
     if (city) {
-      performFetch(city);
+      performFetch(city, lat, lon);
     }
-  }, [city]);
+  }, [city, lat, lon]);
 
   useEffect(() => {
     if (!city || city.trim().length === 0) {
@@ -44,13 +44,13 @@ export function useWeather(city: string | null) {
     if (timerRef.current) clearTimeout(timerRef.current);
 
     timerRef.current = setTimeout(() => {
-      performFetch(city);
+      performFetch(city, lat, lon);
     }, 500);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [city]);
+  }, [city, lat, lon]);
 
   return { loading, data, error, refetch };
 }

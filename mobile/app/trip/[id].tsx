@@ -13,7 +13,7 @@ export default function TripDetailScreen() {
   const [trip, setTrip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState('');
-  const [newCategory, setNewCategory] = useState('Essentials');
+  const [newCategory, setNewCategory] = useState('All');
 
   useEffect(() => {
     fetchTrip();
@@ -59,7 +59,10 @@ export default function TripDetailScreen() {
     if (!newItem.trim()) return;
 
     try {
-      const { data } = await api.post(`/trips/${id}/items`, { name: newItem, category: newCategory });
+      const { data } = await api.post(`/trips/${id}/items`, { 
+        name: newItem, 
+        category: newCategory === 'All' ? 'Essentials' : newCategory 
+      });
       setTrip((prev: any) => ({
         ...prev,
         items: [...prev.items, data]
@@ -113,7 +116,12 @@ export default function TripDetailScreen() {
 
   const packedCount = trip.items.filter((i: any) => i.is_packed).length;
   const progress = trip.items.length === 0 ? 0 : Math.round((packedCount / trip.items.length) * 100);
-  const categories = Array.from(new Set(trip.items.map((i: any) => i.category)));
+  
+  // Member 2 Logic: Filtering categories based on selection
+  const allCategories = Array.from(new Set(trip.items.map((i: any) => i.category || 'Other')));
+  const filteredCategories = newCategory === 'All' 
+    ? allCategories 
+    : [newCategory];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -147,7 +155,13 @@ export default function TripDetailScreen() {
           </View>
 
           {/* Weather Integration */}
-          <WeatherPreview city={trip.destination} />
+          <WeatherPreview 
+            city={trip.destination} 
+            startDate={trip.start_date} 
+            endDate={trip.end_date} 
+            lat={trip.lat}
+            lon={trip.lon}
+          />
           {isRaining && (
             <View style={styles.rainWarning}>
               <Text style={styles.rainWarningText}>☔ Rain Forecasted! Pack your umbrella.</Text>
@@ -177,7 +191,7 @@ export default function TripDetailScreen() {
           </View>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-            {['Essentials', 'Clothing', 'Electronics', 'Documents', 'Toiletries', 'Other'].map(cat => (
+            {['All', 'Essentials', 'Clothing', 'Electronics', 'Documents', 'Toiletries', 'Other'].map(cat => (
               <TouchableOpacity 
                 key={cat}
                 style={[styles.categoryTab, newCategory === cat && styles.categoryTabActive]}
@@ -190,11 +204,11 @@ export default function TripDetailScreen() {
             ))}
           </ScrollView>
 
-          {categories.map((category: any) => {
-            const categoryItems = trip.items.filter((i: any) => i.category === category);
+          {filteredCategories.map((category: any) => {
+            const categoryItems = trip.items.filter((i: any) => (i.category || 'Other') === category);
             if (categoryItems.length === 0) return null;
             return (
-              <View key={category} style={styles.categoryGroup}>
+              <View key={`cat-${category}`} style={styles.categoryGroup}>
                 <Text style={styles.categoryTitle}>{category}</Text>
                 {categoryItems.map((item: any) => (
                   <View key={item.id} style={styles.itemRow}>

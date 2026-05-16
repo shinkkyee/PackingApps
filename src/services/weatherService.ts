@@ -8,21 +8,28 @@ export class WeatherServiceError extends Error {
   }
 }
 
-export async function fetchWeather(city: string): Promise<WeatherForecast> {
+export async function fetchWeather(city?: string, lat?: number, lon?: number): Promise<WeatherForecast> {
   const apiKey = process.env.OPENWEATHER_API_KEY;
+  console.log(`Weather Request: City="${city}", Lat=${lat}, Lon=${lon}`);
 
   if (!apiKey) {
     throw new WeatherServiceError('OpenWeather API key is missing', 500);
   }
 
   try {
-    const response = await axios.get('https://api.openweathermap.org/data/2.5/forecast', {
-      params: {
-        q: city,
-        appid: apiKey,
-        units: 'metric',
-      },
-    });
+    const params: any = {
+      appid: apiKey,
+      units: 'metric',
+    };
+
+    if (lat !== undefined && lon !== undefined) {
+      params.lat = lat;
+      params.lon = lon;
+    } else {
+      params.q = city;
+    }
+
+    const response = await axios.get('https://api.openweathermap.org/data/2.5/forecast', { params });
 
     const data = response.data;
     const daysMap = new Map<string, DayForecast>();

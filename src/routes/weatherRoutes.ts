@@ -5,14 +5,14 @@ const router = Router();
 
 router.get('/:city', async (req: Request, res: Response): Promise<void> => {
   const { city } = req.params;
-
-  if (!city) {
-    res.status(400).json({ success: false, error: 'City is required' });
-    return;
-  }
+  const { lat, lon } = req.query;
 
   try {
-    const data = await fetchWeather(city);
+    const data = await fetchWeather(
+      city, 
+      lat ? parseFloat(lat as string) : undefined, 
+      lon ? parseFloat(lon as string) : undefined
+    );
     res.json({ success: true, data });
   } catch (error: any) {
     if (error instanceof WeatherServiceError) {

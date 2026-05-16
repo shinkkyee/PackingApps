@@ -6,10 +6,14 @@ import { DayForecast, ForecastItem } from '../types/weather';
 
 interface WeatherPreviewProps {
   city: string;
+  startDate?: string;
+  endDate?: string;
+  lat?: number;
+  lon?: number;
 }
 
-export const WeatherPreview: React.FC<WeatherPreviewProps> = ({ city }) => {
-  const { loading, data, error, refetch } = useWeather(city);
+export const WeatherPreview: React.FC<WeatherPreviewProps> = ({ city, startDate, endDate, lat, lon }) => {
+  const { loading, data, error, refetch } = useWeather(city, lat, lon);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
