@@ -13,7 +13,9 @@ export const generatePackingList = (
   weatherData: any | null,
   startDate?: string,
   endDate?: string,
-  destination: string = ""
+  destination: string = "",
+  travelMethod: string = "flight",
+  luggageType: string = "checked"
 ): PackingItem[] => {
   const items: PackingItem[] = [
     { name: 'Passport/ID', category: 'Documents' },
@@ -122,6 +124,33 @@ export const generatePackingList = (
     if (avgTemp < 15 && lowerType !== 'winter') {
       items.push({ name: 'Light Jacket/Sweater', category: 'Clothing' });
     }
+  }
+
+  // 6. Travel Method and Luggage-Based Logic
+  const lowerMethod = travelMethod?.toLowerCase() || 'flight';
+  const lowerLuggage = luggageType?.toLowerCase() || 'checked';
+
+  if (lowerMethod === 'flight') {
+    items.push({ name: 'Power Bank (Must be Handcarry)', category: 'Electronics' });
+    items.push({ name: 'Travel Liquid Bottles (≤100ml)', category: 'Toiletries' });
+    items.push({ name: 'Earplugs/Sleep Mask', category: 'Essentials' });
+  } else if (lowerMethod === 'road_trip') {
+    items.push({ name: 'Car Charger Adapter', category: 'Electronics' });
+    items.push({ name: 'Road Trip Snacks', category: 'Essentials' });
+    items.push({ name: 'Travel Pillow', category: 'Essentials' });
+  } else if (lowerMethod === 'train') {
+    items.push({ name: 'Headphones/Entertainment', category: 'Electronics' });
+    items.push({ name: 'Comfortable Neck Pillow', category: 'Essentials' });
+  } else if (lowerMethod === 'cruise') {
+    items.push({ name: 'Motion Sickness Pills', category: 'Essentials' });
+    items.push({ name: 'Formal Dinner Attire', category: 'Clothing' });
+  }
+
+  if (lowerLuggage === 'checked') {
+    items.push({ name: 'TSA Approved Luggage Lock', category: 'Essentials' });
+    items.push({ name: 'Baggage Identification Tags', category: 'Essentials' });
+  } else if (lowerLuggage === 'handcarry') {
+    items.push({ name: 'Minimal Toiletries Pack', category: 'Toiletries' });
   }
 
   // Final Cleanup: Remove duplicates

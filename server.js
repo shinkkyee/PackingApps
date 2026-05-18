@@ -154,6 +154,14 @@ var initializeDatabase = () => {
     db.exec("ALTER TABLE trips ADD COLUMN lon REAL");
   } catch (e) {
   }
+  try {
+    db.exec("ALTER TABLE trips ADD COLUMN travel_method TEXT");
+  } catch (e) {
+  }
+  try {
+    db.exec("ALTER TABLE trips ADD COLUMN luggage_type TEXT");
+  } catch (e) {
+  }
 };
 var UserDAO = {
   create: (email, passwordHash) => {
@@ -164,14 +172,24 @@ var UserDAO = {
   },
   findById: (id) => {
     return db.prepare("SELECT * FROM users WHERE id = ?").get(id);
+  },
+  updatePassword: (email, passwordHash) => {
+    return db.prepare("UPDATE users SET password = ? WHERE email = ?").run(passwordHash, email);
   }
 };
 var TripDAO = {
-  create: (user_id, destination, start_date, end_date, trip_type, weather_summary, lat, lon) => {
-    return db.prepare("INSERT INTO trips (user_id, destination, start_date, end_date, trip_type, weather_summary, lat, lon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(user_id, destination, start_date, end_date, trip_type, weather_summary, lat || null, lon || null);
+  create: (user_id, destination, start_date, end_date, trip_type, weather_summary, lat, lon, travel_method, luggage_type) => {
+    return db.prepare("INSERT INTO trips (user_id, destination, start_date, end_date, trip_type, weather_summary, lat, lon, travel_method, luggage_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(user_id, destination, start_date, end_date, trip_type, weather_summary, lat || null, lon || null, travel_method || "flight", luggage_type || "checked");
   },
   findAllByUserId: (user_id) => {
-    return db.prepare("SELECT * FROM trips WHERE user_id = ? ORDER BY id DESC").all(user_id);
+    return db.prepare(`
+      SELECT t.*, 
+             (SELECT COUNT(*) FROM packing_items WHERE trip_id = t.id) as total_items,
+             (SELECT COUNT(*) FROM packing_items WHERE trip_id = t.id AND is_packed = 1) as packed_items
+      FROM trips t 
+      WHERE t.user_id = ? 
+      ORDER BY t.id DESC
+    `).all(user_id);
   },
   findById: (id, user_id) => {
     return db.prepare("SELECT * FROM trips WHERE id = ? AND user_id = ?").get(id, user_id);
@@ -284,6 +302,29 @@ app.post("/api/login", async (req, res) => {
     res.status(401).json({ error: "Invalid credentials" });
   }
 });
+app.post("/api/reset-password", async (req, res) => {
+  const { email, password } = req.body;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const isLongEnough = password.length >= 8;
+  if (!hasUppercase || !hasLowercase || !hasSymbol || !isLongEnough) {
+    return res.status(400).json({
+      error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one symbol."
+    });
+  }
+  try {
+    const user = UserDAO.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: "User with this email does not exist." });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    UserDAO.updatePassword(email, hashedPassword);
+    res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to reset password. Please try again." });
+  }
+});
 app.use("/api/weather", weatherRoutes_default);
 app.get("/api/geocode", async (req, res) => {
   const { q } = req.query;
@@ -305,8 +346,8 @@ app.get("/api/trips", authenticateToken, (req, res) => {
   res.json(trips);
 });
 app.post("/api/trips", authenticateToken, (req, res) => {
-  const { destination, start_date, end_date, trip_type, weather_summary, items, lat, lon } = req.body;
-  const tripResult = TripDAO.create(req.user.id, destination, start_date, end_date, trip_type, weather_summary, lat, lon);
+  const { destination, start_date, end_date, trip_type, weather_summary, items, lat, lon, travel_method, luggage_type } = req.body;
+  const tripResult = TripDAO.create(req.user.id, destination, start_date, end_date, trip_type, weather_summary, lat, lon, travel_method, luggage_type);
   const tripId = Number(tripResult.lastInsertRowid);
   if (items && Array.isArray(items)) {
     ItemDAO.createMany(tripId, items);

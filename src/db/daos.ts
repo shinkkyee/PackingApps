@@ -43,6 +43,12 @@ export const initializeDatabase = () => {
   try {
     db.exec("ALTER TABLE trips ADD COLUMN lon REAL");
   } catch (e) { /* Already exists */ }
+  try {
+    db.exec("ALTER TABLE trips ADD COLUMN travel_method TEXT");
+  } catch (e) { /* Already exists */ }
+  try {
+    db.exec("ALTER TABLE trips ADD COLUMN luggage_type TEXT");
+  } catch (e) { /* Already exists */ }
 };
 
 /**
@@ -59,16 +65,26 @@ export const UserDAO = {
   },
   findById: (id: number) => {
     return db.prepare("SELECT * FROM users WHERE id = ?").get(id);
+  },
+  updatePassword: (email: string, passwordHash: string) => {
+    return db.prepare("UPDATE users SET password = ? WHERE email = ?").run(passwordHash, email);
   }
 };
 
 export const TripDAO = {
-  create: (user_id: number, destination: string, start_date: string, end_date: string, trip_type: string, weather_summary: string, lat?: number, lon?: number) => {
-    return db.prepare("INSERT INTO trips (user_id, destination, start_date, end_date, trip_type, weather_summary, lat, lon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(user_id, destination, start_date, end_date, trip_type, weather_summary, lat || null, lon || null);
+  create: (user_id: number, destination: string, start_date: string, end_date: string, trip_type: string, weather_summary: string, lat?: number, lon?: number, travel_method?: string, luggage_type?: string) => {
+    return db.prepare("INSERT INTO trips (user_id, destination, start_date, end_date, trip_type, weather_summary, lat, lon, travel_method, luggage_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(user_id, destination, start_date, end_date, trip_type, weather_summary, lat || null, lon || null, travel_method || 'flight', luggage_type || 'checked');
   },
   findAllByUserId: (user_id: number) => {
-    return db.prepare("SELECT * FROM trips WHERE user_id = ? ORDER BY id DESC").all(user_id);
+    return db.prepare(`
+      SELECT t.*, 
+             (SELECT COUNT(*) FROM packing_items WHERE trip_id = t.id) as total_items,
+             (SELECT COUNT(*) FROM packing_items WHERE trip_id = t.id AND is_packed = 1) as packed_items
+      FROM trips t 
+      WHERE t.user_id = ? 
+      ORDER BY t.id DESC
+    `).all(user_id);
   },
   findById: (id: number, user_id: number) => {
     return db.prepare("SELECT * FROM trips WHERE id = ? AND user_id = ?").get(id, user_id);

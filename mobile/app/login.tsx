@@ -7,6 +7,7 @@ import api from '../src/services/api';
 
 export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,7 +21,7 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     setError('');
 
-    if (!isLogin) {
+    if (!isLogin || isForgotPassword) {
       if (!hasUppercase || !hasLowercase || !hasSymbol || !isLongEnough) {
         setError('Please meet all password requirements.');
         return;
@@ -33,16 +34,25 @@ export default function LoginScreen() {
     }
 
     try {
-      const endpoint = isLogin ? '/login' : '/register';
-      const { data } = await api.post(endpoint, { email, password });
-      
-      if (isLogin) {
-        await AsyncStorage.setItem('token', data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(data.user));
-        router.replace('/');
-      } else {
+      if (isForgotPassword) {
+        await api.post('/reset-password', { email, password });
+        setIsForgotPassword(false);
         setIsLogin(true);
-        Alert.alert('Success', 'Registration successful! Please login.');
+        setPassword('');
+        Alert.alert('Success', 'Password reset successful! Please login.');
+      } else {
+        const endpoint = isLogin ? '/login' : '/register';
+        const { data } = await api.post(endpoint, { email, password });
+        
+        if (isLogin) {
+          await AsyncStorage.setItem('token', data.token);
+          await AsyncStorage.setItem('user', JSON.stringify(data.user));
+          router.replace('/');
+        } else {
+          setIsLogin(true);
+          setPassword('');
+          Alert.alert('Success', 'Registration successful! Please login.');
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Something went wrong. Make sure EXPO_PUBLIC_API_URL is correct.');
@@ -61,7 +71,11 @@ export default function LoginScreen() {
               <Package size={32} color="#fff" />
             </View>
             <Text style={styles.title}>Packing Pal</Text>
-            <Text style={styles.subtitle}>{isLogin ? 'Welcome back!' : 'Create your account'}</Text>
+            <Text style={styles.subtitle}>
+              {isForgotPassword 
+                ? 'Reset your password' 
+                : (isLogin ? 'Welcome back!' : 'Create your account')}
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -75,16 +89,30 @@ export default function LoginScreen() {
               placeholder="Enter your email"
             />
 
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{isForgotPassword ? 'New Password' : 'Password'}</Text>
             <TextInput 
               style={styles.input}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              placeholder="Enter your password"
+              placeholder={isForgotPassword ? 'Enter new password' : 'Enter your password'}
             />
 
-            {!isLogin && (
+            {isLogin && (
+              <TouchableOpacity 
+                onPress={() => {
+                  setIsForgotPassword(true);
+                  setIsLogin(false);
+                  setPassword('');
+                  setError('');
+                }} 
+                style={styles.forgotPasswordContainer}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
+
+            {(!isLogin || isForgotPassword) && (
               <View style={styles.requirementsContainer}>
                 <Text style={[styles.requirementText, isLongEnough ? styles.reqMet : styles.reqUnmet]}>
                   • At least 8 characters
@@ -104,21 +132,40 @@ export default function LoginScreen() {
             {!!error && <Text style={styles.errorText}>{error}</Text>}
 
             <TouchableOpacity 
-              style={[styles.button, (!isLogin && (!hasUppercase || !hasLowercase || !hasSymbol || !isLongEnough)) && styles.buttonDisabled]}
+              style={[styles.button, ((!isLogin || isForgotPassword) && (!hasUppercase || !hasLowercase || !hasSymbol || !isLongEnough)) && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={!isLogin && (!hasUppercase || !hasLowercase || !hasSymbol || !isLongEnough)}
+              disabled={(!isLogin || isForgotPassword) && (!hasUppercase || !hasLowercase || !hasSymbol || !isLongEnough)}
             >
-              <Text style={styles.buttonText}>{isLogin ? 'Login' : 'Register'}</Text>
+              <Text style={styles.buttonText}>
+                {isForgotPassword ? 'Reset Password' : (isLogin ? 'Login' : 'Register')}
+              </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-            </Text>
-            <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
-              <Text style={styles.linkText}>{isLogin ? 'Register' : 'Login'}</Text>
-            </TouchableOpacity>
+            {isForgotPassword ? (
+              <TouchableOpacity onPress={() => {
+                setIsForgotPassword(false);
+                setIsLogin(true);
+                setPassword('');
+                setError('');
+              }}>
+                <Text style={styles.linkText}>Back to Login</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <Text style={styles.footerText}>
+                  {isLogin ? "Don't have an account? " : "Already have an account? "}
+                </Text>
+                <TouchableOpacity onPress={() => {
+                  setIsLogin(!isLogin);
+                  setPassword('');
+                  setError('');
+                }}>
+                  <Text style={styles.linkText}>{isLogin ? 'Register' : 'Login'}</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -231,5 +278,15 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 14,
     fontWeight: '600',
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginTop: -4,
+    marginBottom: 8,
+  },
+  forgotPasswordText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

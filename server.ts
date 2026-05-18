@@ -83,6 +83,36 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Reset Password
+app.post("/api/reset-password", async (req, res) => {
+  const { email, password } = req.body;
+  
+  // Password validation
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const isLongEnough = password.length >= 8;
+  
+  if (!hasUppercase || !hasLowercase || !hasSymbol || !isLongEnough) {
+    return res.status(400).json({ 
+      error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one symbol." 
+    });
+  }
+
+  try {
+    const user = UserDAO.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: "User with this email does not exist." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    UserDAO.updatePassword(email, hashedPassword);
+    res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to reset password. Please try again." });
+  }
+});
+
 // Weather Route Module
 app.use("/api/weather", weatherRouter);
 
@@ -111,9 +141,9 @@ app.get("/api/trips", authenticateToken, (req: any, res) => {
 });
 
 app.post("/api/trips", authenticateToken, (req: any, res) => {
-  const { destination, start_date, end_date, trip_type, weather_summary, items, lat, lon } = req.body;
+  const { destination, start_date, end_date, trip_type, weather_summary, items, lat, lon, travel_method, luggage_type } = req.body;
   
-  const tripResult = TripDAO.create(req.user.id, destination, start_date, end_date, trip_type, weather_summary, lat, lon);
+  const tripResult = TripDAO.create(req.user.id, destination, start_date, end_date, trip_type, weather_summary, lat, lon, travel_method, luggage_type);
   const tripId = Number(tripResult.lastInsertRowid);
 
   if (items && Array.isArray(items)) {

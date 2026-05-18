@@ -20,6 +20,8 @@ export default function NewTripScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   
   const [tripType, setTripType] = useState('leisure');
+  const [travelMethod, setTravelMethod] = useState('flight');
+  const [luggageType, setLuggageType] = useState('checked');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [skipNextSearch, setSkipNextSearch] = useState(false);
@@ -91,7 +93,7 @@ export default function NewTripScreen() {
         }
       } catch (e) { console.warn("Weather error", e); }
 
-      const initialItems = generatePackingList(tripType, fullWeatherData, startStr, endStr, destination);
+      const initialItems = generatePackingList(tripType, fullWeatherData, startStr, endStr, destination, travelMethod, luggageType);
       const { data } = await api.post('/trips', {
         destination,
         start_date: startStr,
@@ -100,7 +102,9 @@ export default function NewTripScreen() {
         weather_summary: weatherSummary,
         items: initialItems,
         lat: selectedCoords?.lat,
-        lon: selectedCoords?.lon
+        lon: selectedCoords?.lon,
+        travel_method: travelMethod,
+        luggage_type: luggageType
       });
       router.replace(`/trip/${data.id}`);
     } catch (err: any) {
@@ -212,6 +216,36 @@ export default function NewTripScreen() {
             {['business', 'leisure', 'hiking', 'beach', 'winter'].map((type) => (
               <TouchableOpacity key={type} style={[styles.typeButton, tripType === type && styles.typeButtonActive]} onPress={() => setTripType(type)}>
                 <Text style={[styles.typeText, tripType === type && styles.typeTextActive]}>{type}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={[styles.formGroup, { marginTop: 10 }]}>
+          <Text style={styles.label}>Travel Method</Text>
+          <View style={styles.typeGrid}>
+            {[
+              { id: 'flight', label: '✈️ Flight' },
+              { id: 'train', label: '🚆 Train' },
+              { id: 'road_trip', label: '🚗 Road Trip' },
+              { id: 'cruise', label: '🛳️ Cruise' }
+            ].map((method) => (
+              <TouchableOpacity key={method.id} style={[styles.typeButton, travelMethod === method.id && styles.typeButtonActive]} onPress={() => setTravelMethod(method.id)}>
+                <Text style={[styles.typeText, travelMethod === method.id && styles.typeTextActive]}>{method.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={[styles.formGroup, { marginTop: 10 }]}>
+          <Text style={styles.label}>Luggage Type</Text>
+          <View style={styles.typeGrid}>
+            {[
+              { id: 'handcarry', label: '🎒 Handcarry Only' },
+              { id: 'checked', label: '🧳 Checked Baggage' }
+            ].map((lug) => (
+              <TouchableOpacity key={lug.id} style={[styles.typeButton, luggageType === lug.id && styles.typeButtonActive]} onPress={() => setLuggageType(lug.id)}>
+                <Text style={[styles.typeText, luggageType === lug.id && styles.typeTextActive]}>{lug.label}</Text>
               </TouchableOpacity>
             ))}
           </View>

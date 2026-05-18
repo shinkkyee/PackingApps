@@ -168,6 +168,27 @@ export default function TripDetailScreen() {
             </View>
           )}
 
+          {trip.travel_method === 'flight' && (
+            <View style={styles.flightAlert}>
+              <Text style={styles.alertTitle}>✈️ Flight Packing Rules</Text>
+              <Text style={styles.alertText}>
+                • Liquids in handcarry must be in containers ≤100ml (max 1L total).
+              </Text>
+              <Text style={styles.alertText}>
+                • Power banks, lithium batteries, and laptops **must go in handcarry**, NOT in checked luggage!
+              </Text>
+            </View>
+          )}
+
+          {trip.luggage_type === 'checked' && (
+            <View style={styles.luggageAlert}>
+              <Text style={styles.alertTitle}>🧳 Checked Baggage Tip</Text>
+              <Text style={styles.alertText}>
+                • Make sure your bag is within limits (usually ≤20kg or 23kg) to avoid extra airport fees.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressTitle}>Packing Progress</Text>
@@ -424,5 +445,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  flightAlert: {
+    backgroundColor: '#fffbeb',
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+  },
+  luggageAlert: {
+    backgroundColor: '#f0fdf4',
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#dcfce7',
+  },
+  alertTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  alertText: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 16,
+    marginTop: 2,
   },
 });
